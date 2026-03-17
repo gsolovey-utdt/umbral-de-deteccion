@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Experimento de detección de bordes</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app">
+    <section id="welcome-screen" class="screen">
+      <div class="card">
+        <h1>Experimento de detección de bordes</h1>
+        <p>
+          En cada ensayo vas a ver dos regiones de color muy parecido. Tu tarea es tocar
+          o hacer clic en el lugar donde creés que cambia el color. A veces la diferencia
+          será muy sutil. Intentá responder lo mejor posible.
+        </p>
+        <div class="control-group">
+          <label>Modo de color</label>
+          <div class="mode-buttons" role="group" aria-label="Modo de color">
+            <button type="button" class="mode-btn is-active mode-gris" data-mode="Gris" aria-pressed="true" aria-label="Gris">
+              <span class="mode-label">Gris</span>
+            </button>
+            <button type="button" class="mode-btn mode-rojo" data-mode="Rojo" aria-pressed="false" aria-label="Rojo">
+              <span class="mode-label">Rojo</span>
+            </button>
+            <button type="button" class="mode-btn mode-verde" data-mode="Verde" aria-pressed="false" aria-label="Verde">
+              <span class="mode-label">Verde</span>
+            </button>
+            <button type="button" class="mode-btn mode-azul" data-mode="Azul" aria-pressed="false" aria-label="Azul">
+              <span class="mode-label">Azul</span>
+            </button>
+          </div>
+        </div>
+        <button id="start-btn" class="btn btn-primary">Comenzar</button>
+      </div>
+    </section>
+
+    <section id="experiment-screen" class="screen hidden">
+      <div class="top-bar">
+        <p id="trial-progress">Ensayo 1 de 30</p>
+        <p id="trial-instruction">Hacé clic donde creés que está el borde.</p>
+      </div>
+      <div id="stimulus-area" aria-label="Área de estímulo">
+        <div id="region-one" class="region"></div>
+        <div id="region-two" class="region"></div>
+        <canvas id="feedback-canvas"></canvas>
+        <div id="feedback-overlay" class="hidden"></div>
+      </div>
+    </section>
+
+    <section id="results-screen" class="screen hidden">
+      <div class="card">
+        <h2>Resultados</h2>
+        <div class="chart-wrap">
+          <canvas id="results-chart"></canvas>
+        </div>
+        <p id="threshold-text"></p>
+        <p id="interpretation-text">
+          Este gráfico muestra cómo cambió tu desempeño a medida que aumentó la diferencia
+          de color entre las dos regiones. El umbral indica aproximadamente el nivel a
+          partir del cual pudiste localizar el borde con mayor confiabilidad.
+        </p>
+        <p id="invalid-text" class="alert hidden">
+          No se pudo estimar el umbral de manera confiable. Por favor, repetí la prueba.
+        </p>
+        <div class="actions">
+          <button id="restart-btn" class="btn btn-primary">Reiniciar</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
