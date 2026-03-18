@@ -265,9 +265,9 @@
     </section>
 
     <section class="card">
-      <h2>Distribuciones superpuestas de umbral</h2>
+      <h2>Boxplots de umbral por color</h2>
       <p id="density-note" class="note">
-        Se grafica cada color solo si tiene al menos 10 umbrales validos (estimado).
+        Se grafica cada color solo si tiene al menos 10 umbrales validos (estimado, sin NA).
       </p>
       <div class="chart-wrap">
         <canvas id="density-chart"></canvas>
@@ -309,7 +309,7 @@
     const state = {
       rows: [],
       rankingColor: "Gris",
-      densityChart: null
+      boxplotSummary: []
     };
 
     const refs = {
@@ -334,6 +334,11 @@
     });
 
     void loadData();
+    window.addEventListener("resize", () => {
+      if (state.boxplotSummary.length) {
+        drawBoxplot(state.boxplotSummary);
+      }
+    });
 
     async function loadData() {
       setStatus("Cargando datos...", "");
@@ -400,7 +405,7 @@
           <p>N validos: <strong>${n}</strong></p>
           <p>Promedio umbral: <strong>${mean !== null ? mean.toFixed(2) : "-"}</strong></p>
           <p>NA: <strong>${invalidRows.length}</strong></p>
-          <p>${n >= 10 ? "Listo para histograma." : "Necesita al menos 10 para histograma."}</p>
+          <p>${n >= 10 ? "Listo para boxplot." : "Necesita al menos 10 para boxplot."}</p>
         `;
         refs.summaryGrid.appendChild(card);
       });
@@ -410,82 +415,189 @@
       const eligible = COLORS.filter((color) => getValidRows(color).length >= 10);
       if (!eligible.length) {
         refs.densityNote.textContent =
-          "No hay colores con n >= 10 de umbral valido. Aun no se puede graficar distribuciones.";
+          "No hay colores con n >= 10 de umbral valido. Aun no se puede graficar boxplots.";
         clearChart();
         return;
       }
 
-      const allValues = eligible.flatMap((color) =>
-        getValidRows(color).map((r) => Number(r.threshold_value))
-      );
-      const minVal = Math.min(...allValues);
-      const maxVal = Math.max(...allValues);
-      const spread = Math.max(0.001, maxVal - minVal);
-      const bins = 12;
-      const binWidth = spread / bins;
-
-      const datasets = eligible.map((color) => {
-        const values = getValidRows(color).map((r) => Number(r.threshold_value));
-        const counts = new Array(bins).fill(0);
-        values.forEach((v) => {
-          const idx = Math.min(bins - 1, Math.floor((v - minVal) / binWidth));
-          counts[idx] += 1;
-        });
-
-        const points = counts.map((count, i) => {
-          const center = minVal + (i + 0.5) * binWidth;
-          const relFreq = count / values.length;
-          return { x: center, y: relFreq };
-        });
-
-        return {
-          label: `${color} (n=${values.length})`,
-          data: points,
-          parsing: false,
-          borderColor: COLOR_META[color].css,
-          backgroundColor: COLOR_META[color].css,
-          borderWidth: 2,
-          pointRadius: 0,
-          tension: 0.25,
-          showLine: true
-        };
+      const summary = eligible.map((color) => {
+        const values = getValidRows(color)
+          .map((r) => Number(r.threshold_value))
+          .filter((v) => Number.isFinite(v))
+          .sort((a, b) => a - b);
+        return { color, n: values.length, ...computeBoxStats(values) };
       });
+
+      summary.sort((a, b) => a.median - b.median);
+      state.boxplotSummary = summary;
+      drawBoxplot(summary);
 
       refs.densityNote.textContent =
-        "Distribuciones relativas por color (solo colores con n >= 10 y umbral valido).";
+        "Boxplots por color ordenados de menor a mayor mediana de umbral.";
+    }
 
-      if (state.densityChart) {
-        state.densityChart.destroy();
+    function computeBoxStats(sortedValues) {
+      const min = sortedValues[0];
+      const max = sortedValues[sortedValues.length - 1];
+      const q1 = quantile(sortedValues, 0.25);
+      const median = quantile(sortedValues, 0.5);
+      const q3 = quantile(sortedValues, 0.75);
+      return { min, q1, median, q3, max };
+    }
+
+    function quantile(sortedValues, q) {
+      const pos = (sortedValues.length - 1) * q;
+      const base = Math.floor(pos);
+      const rest = pos - base;
+      const next = sortedValues[base + 1];
+      if (next !== undefined) {
+        return sortedValues[base] + rest * (next - sortedValues[base]);
       }
-      state.densityChart = new Chart(refs.densityCanvas, {
-        type: "line",
-        data: { datasets },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              labels: { color: "#2a394f" }
-            }
-          },
-          scales: {
-            x: {
-              type: "linear",
-              title: {
-                display: true,
-                text: "Umbral"
-              }
-            },
-            y: {
-              min: 0,
-              title: {
-                display: true,
-                text: "Frecuencia relativa"
-              }
-            }
-          }
-        }
+      return sortedValues[base];
+    }
+
+    function drawBoxplot(summary) {
+      const canvas = refs.densityCanvas;
+      const host = canvas.parentElement;
+      const hostRect = host.getBoundingClientRect();
+      const width = Math.max(320, Math.floor(hostRect.width));
+      const height = Math.max(260, Math.floor(hostRect.height));
+      const dpr = window.devicePixelRatio || 1;
+
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      canvas.style.width = `${width}px`;
+      canvas.style.height = `${height}px`;
+
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+
+      const pad = { top: 18, right: 22, bottom: 62, left: 58 };
+      const plotW = width - pad.left - pad.right;
+      const plotH = height - pad.top - pad.bottom;
+
+      const globalMin = Math.min(...summary.map((s) => s.min));
+      const globalMax = Math.max(...summary.map((s) => s.max));
+      const span = Math.max(1e-6, globalMax - globalMin);
+      const yMin = globalMin - span * 0.08;
+      const yMax = globalMax + span * 0.08;
+      const toY = (v) => pad.top + ((yMax - v) / (yMax - yMin)) * plotH;
+
+      const ticks = niceTicks(yMin, yMax, 6);
+      ctx.strokeStyle = "#e4eaf5";
+      ctx.lineWidth = 1;
+      ticks.forEach((t) => {
+        const y = toY(t);
+        ctx.beginPath();
+        ctx.moveTo(pad.left, y);
+        ctx.lineTo(width - pad.right, y);
+        ctx.stroke();
       });
+
+      ctx.fillStyle = "#55637d";
+      ctx.font = "12px Trebuchet MS";
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+      ticks.forEach((t) => {
+        ctx.fillText(t.toFixed(2).replace(/\.00$/, ""), pad.left - 8, toY(t));
+      });
+
+      ctx.strokeStyle = "#8ea0bc";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(pad.left, pad.top);
+      ctx.lineTo(pad.left, height - pad.bottom);
+      ctx.lineTo(width - pad.right, height - pad.bottom);
+      ctx.stroke();
+
+      const n = summary.length;
+      const step = plotW / n;
+      const boxW = Math.min(56, step * 0.52);
+
+      summary.forEach((s, idx) => {
+        const x = pad.left + step * idx + step / 2;
+        const color = COLOR_META[s.color].css;
+        const stroke = color;
+        const fill = hexToRgba(color, 0.24);
+
+        const yQ1 = toY(s.q1);
+        const yMed = toY(s.median);
+        const yQ3 = toY(s.q3);
+
+        ctx.fillStyle = fill;
+        ctx.strokeStyle = stroke;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.rect(x - boxW / 2, yQ3, boxW, yQ1 - yQ3);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.strokeStyle = "#1a2231";
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(x - boxW / 2, yMed);
+        ctx.lineTo(x + boxW / 2, yMed);
+        ctx.stroke();
+
+        ctx.fillStyle = stroke;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "top";
+        ctx.font = "700 12px Trebuchet MS";
+        ctx.fillText(s.color, x, height - pad.bottom + 10);
+        ctx.font = "11px Trebuchet MS";
+        ctx.fillStyle = "#5c6881";
+        ctx.fillText(`n=${s.n}`, x, height - pad.bottom + 26);
+      });
+
+      ctx.save();
+      ctx.translate(16, pad.top + plotH / 2);
+      ctx.rotate(-Math.PI / 2);
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = "#4d5a73";
+      ctx.font = "12px Trebuchet MS";
+      ctx.fillText("Umbral de deteccion", 0, 0);
+      ctx.restore();
+
+      ctx.fillStyle = "#4d5a73";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "alphabetic";
+      ctx.font = "12px Trebuchet MS";
+      ctx.fillText("Colores (ordenados por mediana ascendente)", pad.left + plotW / 2, height - 10);
+    }
+
+    function niceTicks(min, max, count) {
+      if (!Number.isFinite(min) || !Number.isFinite(max)) return [0];
+      if (min === max) return [min];
+      const rawStep = (max - min) / Math.max(1, count - 1);
+      const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+      const norm = rawStep / mag;
+      let step;
+      if (norm < 1.5) step = 1 * mag;
+      else if (norm < 3) step = 2 * mag;
+      else if (norm < 7) step = 5 * mag;
+      else step = 10 * mag;
+
+      const start = Math.floor(min / step) * step;
+      const end = Math.ceil(max / step) * step;
+      const ticks = [];
+      for (let v = start; v <= end + step * 0.5; v += step) {
+        ticks.push(v);
+      }
+      return ticks;
+    }
+
+    function hexToRgba(hex, alpha) {
+      const normalized = hex.replace("#", "");
+      const full = normalized.length === 3
+        ? normalized.split("").map((c) => c + c).join("")
+        : normalized;
+      const num = parseInt(full, 16);
+      const r = (num >> 16) & 255;
+      const g = (num >> 8) & 255;
+      const b = num & 255;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }
 
     function renderRanking() {
@@ -521,10 +633,10 @@
     }
 
     function clearChart() {
-      if (state.densityChart) {
-        state.densityChart.destroy();
-        state.densityChart = null;
-      }
+      state.boxplotSummary = [];
+      const canvas = refs.densityCanvas;
+      const ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 
     function escapeHtml(str) {
