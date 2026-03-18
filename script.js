@@ -11,13 +11,38 @@ const EASIER_SCALE = 1.45;
 const MIN_DELTA = 0.25;
 const MAX_DELTA = 127;
 
+// Fill these values to enable Supabase persistence.
+const SUPABASE_URL = "https://irryksaoygdklwtsjsru.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_9zF3s9-hDyRRVi5OqAFP-w_z9Mrx9bt";
+const SUPABASE_TABLE = "edge_threshold_sessions";
+const SUPABASE_ENABLED = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+const SUPABASE_HAS_JWT_KEY = SUPABASE_ANON_KEY.includes(".");
+const SUPABASE_REST = SUPABASE_ENABLED
+  ? `${SUPABASE_URL.replace(/\/$/, "")}/rest/v1/${SUPABASE_TABLE}`
+  : "";
+const SUPABASE_HEADERS = SUPABASE_ENABLED
+  ? {
+    "Content-Type": "application/json",
+    apikey: SUPABASE_ANON_KEY,
+    ...(SUPABASE_HAS_JWT_KEY ? { Authorization: `Bearer ${SUPABASE_ANON_KEY}` } : {})
+  }
+  : {};
+
 const ui = {
+  welcomeBrand: document.getElementById("welcome-brand"),
   welcomeScreen: document.getElementById("welcome-screen"),
+  infoScreen: document.getElementById("info-screen"),
   experimentScreen: document.getElementById("experiment-screen"),
   resultsScreen: document.getElementById("results-screen"),
   modeButtons: Array.from(document.querySelectorAll(".mode-btn")),
+  participantInput: document.getElementById("participant-input"),
+  welcomeError: document.getElementById("welcome-error"),
   startBtn: document.getElementById("start-btn"),
-  restartBtn: document.getElementById("restart-btn"),
+  infoBtn: document.getElementById("info-btn"),
+  backBtn: document.getElementById("back-btn"),
+  repeatBtn: document.getElementById("repeat-btn"),
+  otherColorBtn: document.getElementById("other-color-btn"),
+  shareBtn: document.getElementById("share-btn"),
   trialProgress: document.getElementById("trial-progress"),
   trialInstruction: document.getElementById("trial-instruction"),
   stimulusArea: document.getElementById("stimulus-area"),
@@ -25,14 +50,19 @@ const ui = {
   regionTwo: document.getElementById("region-two"),
   feedbackCanvas: document.getElementById("feedback-canvas"),
   feedbackOverlay: document.getElementById("feedback-overlay"),
+  participantSummary: document.getElementById("participant-summary"),
   thresholdText: document.getElementById("threshold-text"),
   interpretationText: document.getElementById("interpretation-text"),
   invalidText: document.getElementById("invalid-text"),
+  saveStatus: document.getElementById("save-status"),
+  rankingStatus: document.getElementById("ranking-status"),
+  rankingList: document.getElementById("ranking-list"),
   chartCanvas: document.getElementById("results-chart")
 };
 
 const state = {
   mode: "Gris",
+  participantName: "",
   deltaLevels: [...INITIAL_DELTA_LEVELS],
   blockNumber: 1,
   trials: [],
@@ -45,23 +75,21 @@ const state = {
   baseInFirstRegion: true,
   trialStartTime: 0,
   awaitingResponse: false,
-  chart: null
+  chart: null,
+  lastThresholdValue: null,
+  lastThresholdStatus: "na",
+  lastSavedRowId: null
 };
 
-ui.startBtn.addEventListener("click", startExperiment);
-ui.restartBtn.addEventListener("click", restartExperiment);
-initializeModeSelection();
+ui.startBtn.addEventListener("click", startExperimentFromWelcome);
+ui.infoBtn.addEventListener("click", () => showScreen("info"));
+ui.backBtn.addEventListener("click", () => showScreen("welcome"));
+ui.repeatBtn.addEventListener("click", repeatSameColor);
+ui.otherColorBtn.addEventListener("click", goToWelcome);
+ui.shareBtn.addEventListener("click", shareResults);
 
-function startExperiment() {
-  state.deltaLevels = [...INITIAL_DELTA_LEVELS];
-  state.blockNumber = 1;
-  state.records = [];
-  startNewBlock();
-  ui.invalidText.classList.add("hidden");
-  ui.thresholdText.textContent = "";
-  showScreen("experiment");
-  runNextTrial();
-}
+initializeModeSelection();
+setSaveStatus("", "info");
 
 function initializeModeSelection() {
   ui.modeButtons.forEach((btn) => {
@@ -85,17 +113,56 @@ function setSelectedMode(mode) {
   });
 }
 
-function restartExperiment() {
+function startExperimentFromWelcome() {
+  const participantName = normalizeParticipantName(ui.participantInput.value);
+  if (!participantName) {
+    ui.welcomeError.classList.remove("hidden");
+    return;
+  }
+  ui.welcomeError.classList.add("hidden");
+  state.participantName = participantName;
+  ui.participantInput.value = participantName;
+  startExperimentCore();
+}
+
+function repeatSameColor() {
+  if (!state.participantName) {
+    goToWelcome();
+    return;
+  }
+  startExperimentCore();
+}
+
+function goToWelcome() {
   detachResponseListeners();
   state.awaitingResponse = false;
-  clearFeedbackLayer();
-  if (state.chart) {
-    state.chart.destroy();
-    state.chart = null;
-  }
+  ui.participantInput.value = state.participantName;
+  showScreen("welcome");
+}
+
+function startExperimentCore() {
+  state.deltaLevels = [...INITIAL_DELTA_LEVELS];
+  state.blockNumber = 1;
+  state.records = [];
+  state.lastThresholdValue = null;
+  state.lastThresholdStatus = "na";
+  state.lastSavedRowId = null;
+  startNewBlock();
   ui.invalidText.classList.add("hidden");
   ui.thresholdText.textContent = "";
-  showScreen("welcome");
+  ui.participantSummary.textContent = "";
+  setSaveStatus("", "info");
+  resetRankingPanel();
+  showScreen("experiment");
+  runNextTrial();
+}
+
+function showScreen(name) {
+  ui.welcomeBrand.classList.toggle("hidden", name !== "welcome");
+  ui.welcomeScreen.classList.toggle("hidden", name !== "welcome");
+  ui.infoScreen.classList.toggle("hidden", name !== "info");
+  ui.experimentScreen.classList.toggle("hidden", name !== "experiment");
+  ui.resultsScreen.classList.toggle("hidden", name !== "results");
 }
 
 function startNewBlock() {
@@ -313,7 +380,7 @@ function processResponse(responsePosition) {
 
 function getTolerancePx() {
   const smallestSide = Math.min(window.innerWidth, window.innerHeight);
-  return smallestSide < 360 ? 14 : 10;
+  return smallestSide < 360 ? 20 : 15;
 }
 
 function getFeedbackMessage(error) {
@@ -397,6 +464,7 @@ function saveTrialRecord(responsePosition, error, correct, reactionTime) {
     trialNumber: state.records.length + 1,
     blockNumber: state.blockNumber,
     trialInBlock: state.trialIndex + 1,
+    participantName: state.participantName,
     colorMode: state.mode,
     deltaLevelIndex: state.currentTrial.deltaIndex,
     deltaValue: round2(state.currentTrial.delta),
@@ -454,6 +522,8 @@ function showAdaptiveTransition(direction, previousLevels, nextLevels) {
 
 function finishExperiment(stats, quality) {
   showScreen("results");
+  ui.participantSummary.textContent = `Participante: ${state.participantName} | Modo: ${state.mode}`;
+
   const invalid = quality.allVeryHigh
     || quality.allVeryLow
     || quality.stronglyDecreasing
@@ -462,23 +532,29 @@ function finishExperiment(stats, quality) {
 
   ui.invalidText.classList.toggle("hidden", !invalid);
 
+  let thresholdValue = null;
+  let thresholdStatus = "na";
+
   if (invalid) {
     ui.thresholdText.textContent = "Umbral estimado: no disponible";
     renderResultsChart(stats, null, null);
-    return;
+  } else {
+    const estimate = estimateThreshold(stats, CRITERION);
+    if (!estimate || !Number.isFinite(estimate.threshold)) {
+      ui.thresholdText.textContent = "Umbral estimado: no disponible";
+      renderResultsChart(stats, null, null);
+      ui.invalidText.classList.remove("hidden");
+    } else {
+      thresholdValue = round2(estimate.threshold);
+      thresholdStatus = "estimado";
+      ui.thresholdText.textContent = `Umbral estimado: ${thresholdValue.toFixed(2)}`;
+      renderResultsChart(stats, estimate.curve, estimate.threshold);
+    }
   }
 
-  const estimate = estimateThreshold(stats, CRITERION);
-  if (!estimate || !Number.isFinite(estimate.threshold)) {
-    ui.thresholdText.textContent = "Umbral estimado: no disponible";
-    renderResultsChart(stats, null, null);
-    ui.invalidText.classList.remove("hidden");
-    return;
-  }
-
-  const thresholdRounded = estimate.threshold.toFixed(2);
-  ui.thresholdText.textContent = `Umbral estimado: ${thresholdRounded}`;
-  renderResultsChart(stats, estimate.curve, estimate.threshold);
+  state.lastThresholdValue = thresholdValue;
+  state.lastThresholdStatus = thresholdStatus;
+  void persistOutcomeAndLoadRanking();
 }
 
 function computeStatsByLevel(deltaLevels, records) {
@@ -716,6 +792,154 @@ function renderResultsChart(stats, curve, thresholdValue) {
   });
 }
 
+async function persistOutcomeAndLoadRanking() {
+  if (!SUPABASE_ENABLED) {
+    setSaveStatus("Supabase no configurado. Resultado solo local.", "info");
+    ui.rankingStatus.textContent = "Sin conexion";
+    ui.rankingList.innerHTML = "<p class='rank-meta'>Configura Supabase para ver ranking.</p>";
+    return;
+  }
+
+  setSaveStatus("Guardando resultado...", "info");
+  ui.rankingStatus.textContent = "Actualizando...";
+  ui.rankingList.innerHTML = "";
+
+  const payload = {
+    participant_name: state.participantName,
+    color_mode: state.mode,
+    threshold_value: state.lastThresholdStatus === "estimado" ? state.lastThresholdValue : null,
+    threshold_status: state.lastThresholdStatus,
+    criterion: CRITERION,
+    blocks_used: state.blockNumber,
+    created_at: new Date().toISOString()
+  };
+
+  try {
+    const insertResponse = await fetch(SUPABASE_REST, {
+      method: "POST",
+      headers: {
+        ...SUPABASE_HEADERS,
+        Prefer: "return=representation"
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!insertResponse.ok) {
+      const detail = await insertResponse.text();
+      throw new Error(`Insert ${insertResponse.status}: ${detail}`);
+    }
+
+    const inserted = await insertResponse.json();
+    state.lastSavedRowId = inserted?.[0]?.id ?? null;
+    setSaveStatus("Resultado guardado en Supabase.", "ok");
+  } catch (error) {
+    setSaveStatus("No se pudo guardar en Supabase.", "err");
+    ui.rankingStatus.textContent = "Error";
+    ui.rankingList.innerHTML = "<p class='rank-meta'>No se pudo actualizar ranking.</p>";
+    return;
+  }
+
+  try {
+    const rows = await loadRankingForMode(state.mode);
+    renderRanking(rows);
+  } catch (error) {
+    ui.rankingStatus.textContent = "Error";
+    ui.rankingList.innerHTML = "<p class='rank-meta'>No se pudo cargar ranking.</p>";
+  }
+}
+
+async function loadRankingForMode(mode) {
+  const params = new URLSearchParams({
+    select: "id,participant_name,color_mode,threshold_value,threshold_status,created_at",
+    color_mode: `eq.${mode}`,
+    threshold_status: "eq.estimado",
+    order: "threshold_value.asc",
+    limit: "10"
+  });
+
+  const response = await fetch(`${SUPABASE_REST}?${params.toString()}`, {
+    headers: SUPABASE_HEADERS
+  });
+  if (!response.ok) {
+    const detail = await response.text();
+    throw new Error(`Select ${response.status}: ${detail}`);
+  }
+  return response.json();
+}
+
+function renderRanking(rows) {
+  if (!rows || !rows.length) {
+    ui.rankingStatus.textContent = "Sin registros";
+    ui.rankingList.innerHTML = "<p class='rank-meta'>Todavia no hay resultados validos para este modo.</p>";
+    return;
+  }
+
+  ui.rankingStatus.textContent = `${rows.length} resultados`;
+  ui.rankingList.innerHTML = "";
+  rows.forEach((row, idx) => {
+    const rank = idx + 1;
+    const isMine = state.lastSavedRowId && row.id === state.lastSavedRowId;
+
+    const rowEl = document.createElement("div");
+    rowEl.className = `rank-row${isMine ? " mine" : ""}`;
+    const rankClass = rank === 1 ? "top1" : rank === 2 ? "top2" : rank === 3 ? "top3" : "";
+
+    rowEl.innerHTML = `
+      <div class="rank-pos ${rankClass}">#${rank}</div>
+      <div>
+        <div class="rank-name">${escapeHtml(row.participant_name || "Anonimo")}${isMine ? " (tu resultado)" : ""}</div>
+        <div class="rank-meta">${formatDate(row.created_at)}</div>
+      </div>
+      <div class="rank-value">${Number(row.threshold_value).toFixed(2)}</div>
+    `;
+    ui.rankingList.appendChild(rowEl);
+  });
+}
+
+function resetRankingPanel() {
+  ui.rankingStatus.textContent = "Sin cargar";
+  ui.rankingList.innerHTML = "";
+}
+
+function setSaveStatus(message, type) {
+  ui.saveStatus.textContent = message;
+  ui.saveStatus.classList.remove("ok", "err", "info");
+  if (message) {
+    ui.saveStatus.classList.add(type);
+  }
+}
+
+async function shareResults() {
+  const mode = state.mode;
+  const baseText = state.lastThresholdStatus === "estimado"
+    ? `Umbral estimado ${state.lastThresholdValue?.toFixed(2)}`
+    : "Umbral no estimable (NA)";
+
+  const shareText = `${state.participantName} | ${mode} | ${baseText}.`;
+  const shareUrl = window.location.href.split("?")[0];
+
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: "Experimento de deteccion de bordes",
+        text: `${shareText}\n${shareUrl}`
+      });
+      return;
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        return;
+      }
+    }
+  }
+
+  try {
+    await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
+    setSaveStatus("Resumen copiado al portapapeles.", "ok");
+  } catch (error) {
+    setSaveStatus("No se pudo compartir automaticamente.", "err");
+  }
+}
+
 function nearestToCriterion(stats, criterion) {
   return stats.reduce((best, item) => {
     const diff = Math.abs(item.proportionCorrect - criterion);
@@ -760,12 +984,6 @@ function buildCurveFromFunction(min, max, fn) {
   return curve;
 }
 
-function showScreen(name) {
-  ui.welcomeScreen.classList.toggle("hidden", name !== "welcome");
-  ui.experimentScreen.classList.toggle("hidden", name !== "experiment");
-  ui.resultsScreen.classList.toggle("hidden", name !== "results");
-}
-
 function pearsonCorrelation(xs, ys) {
   const n = xs.length;
   if (n !== ys.length || n === 0) {
@@ -789,8 +1007,31 @@ function pearsonCorrelation(xs, ys) {
   return den > 0 ? num / den : 0;
 }
 
+function normalizeParticipantName(value) {
+  return value.trim().replace(/\s+/g, " ");
+}
+
 function formatDeltaList(levels) {
   return levels.map((v) => v.toFixed(2).replace(/\.00$/, "")).join(", ");
+}
+
+function formatDate(value) {
+  if (!value) {
+    return "";
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  return date.toLocaleString("es-AR");
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function round2(v) {
