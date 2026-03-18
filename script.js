@@ -56,6 +56,7 @@ const ui = {
   invalidText: document.getElementById("invalid-text"),
   saveStatus: document.getElementById("save-status"),
   rankingStatus: document.getElementById("ranking-status"),
+  rankingModeButtons: Array.from(document.querySelectorAll(".ranking-tab")),
   rankingList: document.getElementById("ranking-list"),
   chartCanvas: document.getElementById("results-chart")
 };
@@ -76,6 +77,7 @@ const state = {
   trialStartTime: 0,
   awaitingResponse: false,
   chart: null,
+  rankingViewMode: "Gris",
   lastThresholdValue: null,
   lastThresholdStatus: "na",
   lastSavedRowId: null
@@ -89,6 +91,7 @@ ui.otherColorBtn.addEventListener("click", goToWelcome);
 ui.shareBtn.addEventListener("click", shareResults);
 
 initializeModeSelection();
+initializeRankingTabs();
 setSaveStatus("", "info");
 
 function initializeModeSelection() {
@@ -104,6 +107,19 @@ function initializeModeSelection() {
   setSelectedMode(state.mode);
 }
 
+function initializeRankingTabs() {
+  ui.rankingModeButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const mode = btn.dataset.rankingMode;
+      if (!mode) {
+        return;
+      }
+      setRankingMode(mode, { load: true });
+    });
+  });
+  setRankingMode(state.mode, { load: false });
+}
+
 function setSelectedMode(mode) {
   state.mode = mode;
   ui.modeButtons.forEach((btn) => {
@@ -111,6 +127,17 @@ function setSelectedMode(mode) {
     btn.classList.toggle("is-active", isActive);
     btn.setAttribute("aria-pressed", String(isActive));
   });
+}
+
+function setRankingMode(mode, options = { load: false }) {
+  state.rankingViewMode = mode;
+  ui.rankingModeButtons.forEach((btn) => {
+    btn.classList.toggle("is-active", btn.dataset.rankingMode === mode);
+  });
+
+  if (options.load && !ui.resultsScreen.classList.contains("hidden")) {
+    void loadRankingForActiveMode();
+  }
 }
 
 function startExperimentFromWelcome() {
@@ -147,6 +174,7 @@ function startExperimentCore() {
   state.lastThresholdValue = null;
   state.lastThresholdStatus = "na";
   state.lastSavedRowId = null;
+  setRankingMode(state.mode, { load: false });
   startNewBlock();
   ui.invalidText.classList.add("hidden");
   ui.thresholdText.textContent = "";
@@ -793,6 +821,8 @@ function renderResultsChart(stats, curve, thresholdValue) {
 }
 
 async function persistOutcomeAndLoadRanking() {
+  setRankingMode(state.mode, { load: false });
+
   if (!SUPABASE_ENABLED) {
     setSaveStatus("Supabase no configurado. Resultado solo local.", "info");
     ui.rankingStatus.textContent = "Sin conexion";
@@ -840,7 +870,25 @@ async function persistOutcomeAndLoadRanking() {
   }
 
   try {
-    const rows = await loadRankingForMode(state.mode);
+    const rows = await loadRankingForMode(state.rankingViewMode);
+    renderRanking(rows);
+  } catch (error) {
+    ui.rankingStatus.textContent = "Error";
+    ui.rankingList.innerHTML = "<p class='rank-meta'>No se pudo cargar ranking.</p>";
+  }
+}
+
+async function loadRankingForActiveMode() {
+  if (!SUPABASE_ENABLED) {
+    ui.rankingStatus.textContent = "Sin conexion";
+    ui.rankingList.innerHTML = "<p class='rank-meta'>Configura Supabase para ver ranking.</p>";
+    return;
+  }
+
+  ui.rankingStatus.textContent = "Actualizando...";
+  ui.rankingList.innerHTML = "";
+  try {
+    const rows = await loadRankingForMode(state.rankingViewMode);
     renderRanking(rows);
   } catch (error) {
     ui.rankingStatus.textContent = "Error";
@@ -869,12 +917,12 @@ async function loadRankingForMode(mode) {
 
 function renderRanking(rows) {
   if (!rows || !rows.length) {
-    ui.rankingStatus.textContent = "Sin registros";
+    ui.rankingStatus.textContent = `${state.rankingViewMode}: sin registros`;
     ui.rankingList.innerHTML = "<p class='rank-meta'>Todavia no hay resultados validos para este modo.</p>";
     return;
   }
 
-  ui.rankingStatus.textContent = `${rows.length} resultados`;
+  ui.rankingStatus.textContent = `${state.rankingViewMode}: ${rows.length} resultados`;
   ui.rankingList.innerHTML = "";
   rows.forEach((row, idx) => {
     const rank = idx + 1;
@@ -897,7 +945,7 @@ function renderRanking(rows) {
 }
 
 function resetRankingPanel() {
-  ui.rankingStatus.textContent = "Sin cargar";
+  ui.rankingStatus.textContent = `${state.rankingViewMode}: sin cargar`;
   ui.rankingList.innerHTML = "";
 }
 

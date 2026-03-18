@@ -333,6 +333,32 @@ input[type="text"] {
   gap: 0.45rem;
 }
 
+.ranking-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.65rem;
+}
+
+.ranking-tab {
+  min-height: 34px;
+  padding: 0.28rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ranking-tab.is-active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: #eef7ff;
+}
+
 .rank-row {
   display: grid;
   grid-template-columns: 34px 1fr auto;
