@@ -231,8 +231,7 @@ function runNextTrial() {
 }
 
 function updateTrialUi() {
-  ui.trialProgress.textContent =
-    `Bloque ${state.blockNumber} - Ensayo ${state.trialIndex + 1} de ${TOTAL_TRIALS_PER_BLOCK}`;
+  ui.trialProgress.textContent = `Ensayo ${state.trialIndex + 1} de ${TOTAL_TRIALS_PER_BLOCK}`;
   ui.trialInstruction.textContent = state.currentOrientation === "vertical"
     ? "Hace clic donde crees que esta el borde."
     : "Toca donde crees que esta el borde.";
@@ -533,13 +532,13 @@ function showAdaptiveTransition(direction, previousLevels, nextLevels) {
   drawNeutralBackground();
   clearFeedbackLayer();
   const msg = direction === "harder"
-    ? "Ajuste automatico: ahora la diferencia de color es mas sutil."
-    : "Ajuste automatico: ahora la diferencia de color es mayor.";
+    ? "Vamos a repetir 30 ensayos con una diferencia de color mas sutil para estimar mejor tu umbral."
+    : "Vamos a repetir 30 ensayos con una diferencia de color mayor para estimar mejor tu umbral.";
 
-  ui.trialProgress.textContent = `Comienza bloque ${state.blockNumber}`;
+  ui.trialProgress.textContent = "Recalibracion en curso";
   ui.trialInstruction.textContent = msg;
   ui.feedbackOverlay.textContent =
-    `${msg} Nuevos deltas: ${formatDeltaList(nextLevels)} (antes: ${formatDeltaList(previousLevels)}).`;
+    `${msg} Ajuste aplicado: ${formatDeltaList(previousLevels)} -> ${formatDeltaList(nextLevels)}.`;
   ui.feedbackOverlay.classList.remove("hidden");
 
   window.setTimeout(() => {
@@ -582,6 +581,20 @@ function finishExperiment(stats, quality) {
 
   state.lastThresholdValue = thresholdValue;
   state.lastThresholdStatus = thresholdStatus;
+
+  const discardByMaxAttempts =
+    state.lastThresholdStatus !== "estimado" && state.blockNumber >= MAX_ADAPTIVE_BLOCKS;
+
+  if (discardByMaxAttempts) {
+    state.lastSavedRowId = null;
+    setSaveStatus(
+      "No se pudo estimar el umbral tras 3 bloques. Esta sesion no se guardo en la base de datos.",
+      "info"
+    );
+    void loadRankingForActiveMode();
+    return;
+  }
+
   void persistOutcomeAndLoadRanking();
 }
 
