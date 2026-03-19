@@ -477,11 +477,11 @@
       const plotW = width - pad.left - pad.right;
       const plotH = height - pad.top - pad.bottom;
 
-      const globalMin = Math.min(...summary.map((s) => s.min));
-      const globalMax = Math.max(...summary.map((s) => s.max));
-      const span = Math.max(1e-6, globalMax - globalMin);
-      const yMin = globalMin - span * 0.08;
-      const yMax = globalMax + span * 0.08;
+      const globalQ1 = Math.min(...summary.map((s) => s.q1));
+      const globalQ3 = Math.max(...summary.map((s) => s.q3));
+      const span = Math.max(1e-6, globalQ3 - globalQ1);
+      const yMin = globalQ1 - span * 0.15;
+      const yMax = globalQ3 + span * 0.15;
       const toY = (v) => pad.top + ((yMax - v) / (yMax - yMin)) * plotH;
 
       const ticks = niceTicks(yMin, yMax, 6);
