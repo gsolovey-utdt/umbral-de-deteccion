@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aprender más · Umbral de detección · NyPE</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&family=Playfair+Display:wght@600;700;900&display=swap');
+
+:root {
+  --bg:        #0d0e12;
+  --surface:   #161820;
+  --surface-2: #1e2030;
+  --border:    #2a2d3e;
+  --text:      #e8e9f0;
+  --muted:     #8b8fa8;
+  --gold:      #e8c547;
+  --gold-bg:   #e8c547;
+  --blue:      #5b8dee;
+  --shadow:    0 2px 20px rgba(0,0,0,0.35);
+  --radius:    12px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  font-family: 'DM Sans', -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  justify-content: center;
+  padding-bottom: 60px;
+}
+
+.wrap { max-width: 680px; width: 100%; padding: 40px 20px 0; }
+
+/* ── Header ── */
+.nype-header { display: flex; align-items: center; gap: 10px; margin-bottom: 32px; }
+.nype-badge {
+  font-family: 'DM Mono', monospace; font-size: 0.7rem; font-weight: 500;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  background: var(--gold-bg); color: #0d0e12;
+  padding: 0.2rem 0.55rem; border-radius: 4px;
+}
+.nype-sub { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--muted); }
+
+h1 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.7rem, 6vw, 2.5rem); font-weight: 900;
+  line-height: 1.15; letter-spacing: -0.02em;
+  margin-bottom: 10px; color: var(--text);
+}
+h1 span { color: var(--gold); }
+.lead {
+  font-size: 1rem; color: var(--muted); line-height: 1.7;
+  margin-bottom: 40px; max-width: 560px;
+}
+
+/* ── Sections ── */
+.learn-section { margin-bottom: 32px; }
+.learn-section h2 {
+  font-family: 'Playfair Display', serif; font-size: 1.25rem; font-weight: 700;
+  color: var(--text); margin-bottom: 12px;
+}
+.learn-section p { font-size: 0.925rem; color: var(--muted); line-height: 1.75; margin-bottom: 10px; }
+.learn-section p:last-child { margin-bottom: 0; }
+.learn-section strong { color: var(--text); }
+.learn-section em { font-style: italic; }
+
+/* ── Highlight box (neuro) ── */
+.learn-neuro {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px 22px;
+  box-shadow: var(--shadow); margin-bottom: 32px;
+}
+.learn-neuro h2 { color: var(--blue); }
+
+/* ── Highlight box (gold) ── */
+.highlight-box {
+  background: rgba(232,197,71,0.07); border: 1px solid rgba(232,197,71,0.25);
+  border-radius: 10px; padding: 16px 18px; margin: 14px 0;
+  font-size: 0.9rem; color: var(--muted); line-height: 1.7;
+}
+.highlight-box strong { color: var(--gold); }
+
+/* ── Formula box ── */
+.formula-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px; margin: 16px 0;
+  text-align: center; box-shadow: var(--shadow);
+}
+.formula-title {
+  font-family: 'DM Mono', monospace; font-size: 0.7rem;
+  text-transform: uppercase; letter-spacing: 0.12em;
+  color: var(--muted); margin-bottom: 10px;
+}
+.formula-big {
+  font-family: 'Playfair Display', serif; font-size: 2rem;
+  font-weight: 900; color: var(--gold); letter-spacing: 0.02em;
+}
+.formula-sub { font-size: 0.82rem; color: var(--muted); margin-top: 8px; line-height: 1.6; }
+
+/* ── Lists ── */
+.learn-list { list-style: none; display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+.learn-list li { display: flex; gap: 10px; font-size: 0.9rem; color: var(--muted); line-height: 1.6; }
+.learn-list li::before {
+  content: '→'; color: var(--gold); flex-shrink: 0;
+  font-family: 'DM Mono', monospace; margin-top: 1px;
+}
+.learn-list li strong { color: var(--text); }
+
+/* ── Color chips ── */
+.color-chips { display: flex; flex-wrap: wrap; gap: 10px; margin: 14px 0; }
+.chip {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 12px;
+  font-size: 0.85rem; color: var(--text); font-weight: 500;
+}
+.chip-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── Divider ── */
+.divider { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
+
+/* ── Footer ── */
+.learn-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px; margin-top: 40px;
+  padding-top: 20px; border-top: 1px solid var(--border);
+}
+.btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 44px; border-radius: 9px; padding: 0.55rem 1.2rem;
+  font-family: 'DM Sans', sans-serif; font-size: 0.9rem; font-weight: 600;
+  cursor: pointer; text-decoration: none; transition: background 0.18s;
+}
+.btn-secondary {
+  background: var(--surface); color: var(--text);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover { background: var(--surface-2); }
+.author-credit { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="nype-header">
+    <span class="nype-badge">NyPE</span>
+    <span class="nype-sub">Neurociencia y Psicología Experimental</span>
+  </div>
+
+  <h1>El umbral de <span>detección</span></h1>
+  <p class="lead">Con algo tan simple como dos rectángulos de color, este experimento mide un límite fundamental del sistema visual: la mínima diferencia que necesitás para notar que algo cambió.</p>
+
+  <!-- 1 -->
+  <div class="learn-section">
+    <h2>El umbral de detección</h2>
+    <p>
+      Un <strong>umbral de detección</strong> es la mínima diferencia entre dos estímulos que el sistema perceptual puede detectar de manera confiable. Este concepto es central en <strong>psicofísica</strong>, la disciplina que estudia la relación cuantitativa entre los estímulos físicos y las sensaciones que producen.
+    </p>
+    <p>
+      La psicofísica moderna arranca con Gustav Fechner a mediados del siglo XIX, quien formalizó la idea de que la relación entre el mundo físico y la experiencia subjetiva se puede medir con precisión. Uno de sus conceptos clave es la <em>diferencia apenas perceptible</em> (DAP o JND por sus siglas en inglés: <em>just noticeable difference</em>): el mínimo cambio en un estímulo que una persona puede detectar.
+    </p>
+  </div>
+
+  <hr class="divider">
+
+  <!-- 2 -->
+  <div class="learn-section">
+    <h2>Cómo funciona este experimento</h2>
+    <p>
+      En cada ensayo aparecen dos rectángulos de color muy similar, colocados uno al lado del otro. Tu tarea es hacer clic (o tocar) en el lugar donde creés que cambia el color. La diferencia entre las dos regiones varía de ensayo a ensayo: a veces es casi imperceptible, otras veces es más notoria.
+    </p>
+    <p>
+      El experimento usa un método de <strong>niveles fijos</strong>: presenta varios niveles de diferencia de color, repetidos múltiples veces cada uno, y registra en cuántos ensayos por nivel lograste localizar correctamente el borde. Con esos datos se construye una <em>curva psicométrica</em>: una función sigmoide que describe cómo mejora tu desempeño a medida que aumenta la diferencia.
+    </p>
+    <div class="formula-box">
+      <div class="formula-title">Criterio de umbral</div>
+      <div class="formula-big">50%</div>
+      <div class="formula-sub">El umbral se define como el nivel de diferencia al que respondés<br>correctamente en <strong>la mitad de los ensayos</strong>.</div>
+    </div>
+    <p>
+      Por debajo del umbral, el borde es tan sutil que las respuestas son casi aleatorias. Por encima, la diferencia es suficiente para detectarlo de manera consistente. El umbral marca esa transición.
+    </p>
+  </div>
+
+  <hr class="divider">
+
+  <!-- 3 -->
+  <div class="learn-neuro">
+    <h2>Los cuatro canales de color</h2>
+    <p>
+      Podés probar cuatro canales: Gris (luminancia), Rojo, Verde y Azul. El sistema visual humano no los procesa de la misma manera.
+    </p>
+    <div class="color-chips">
+      <div class="chip"><div class="chip-dot" style="background:#606060"></div>Gris (luminancia)</div>
+      <div class="chip"><div class="chip-dot" style="background:#c0392b"></div>Rojo</div>
+      <div class="chip"><div class="chip-dot" style="background:#27ae60"></div>Verde</div>
+      <div class="chip"><div class="chip-dot" style="background:#2980b9"></div>Azul</div>
+    </div>
+    <p>
+      En la retina hay tres tipos de conos, sensibles a longitudes de onda larga (rojo), media (verde) y corta (azul). Pero no están distribuidos uniformemente: hay muchos más conos M (verde) que S (azul), y los conos S están completamente ausentes en la fóvea central. Por eso, en general, el sistema es más sensible a diferencias en el canal verde que en el azul.
+    </p>
+    <p>
+      La luminancia (canal gris) es procesada por los conos M y L juntos y también por los bastones, lo que la hace particularmente robusta. Por eso, en condiciones normales de iluminación, el umbral de luminancia suele ser el más bajo de todos.
+    </p>
+  </div>
+
+  <!-- 4 -->
+  <div class="learn-section">
+    <h2>Cómo interpretar el resultado</h2>
+    <ul class="learn-list">
+      <li><strong>Umbral más bajo</strong> → mayor sensibilidad: necesitás menos diferencia de color para detectar el borde.</li>
+      <li><strong>Umbral más alto</strong> → menor sensibilidad: tu sistema visual requiere una diferencia más grande para percibir el borde de forma confiable.</li>
+      <li>Comparar tus umbrales entre canales muestra qué tan sensible es tu sistema a cada tipo de contraste de color.</li>
+    </ul>
+    <div class="highlight-box">
+      <strong>Nota sobre la confiabilidad:</strong> para que el umbral sea una estimación válida, la curva psicométrica tiene que ajustarse bien a los datos. Si tus respuestas fueron muy variables o el rendimiento no aumentó claramente con la diferencia, el resultado puede ser poco confiable. En ese caso, la app lo indica y te sugiere repetir la prueba.
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- 5 -->
+  <div class="learn-section">
+    <h2>Qué muestran los datos de la clase</h2>
+    <p>
+      Si comparamos los umbrales de todos los participantes, podemos hacernos varias preguntas:
+    </p>
+    <ul class="learn-list">
+      <li>¿Hay diferencias sistemáticas entre canales? ¿El umbral de azul es consistentemente más alto que el de verde?</li>
+      <li>¿Hay mucha variabilidad entre personas? Los umbrales individuales pueden diferir bastante, y eso es real: refleja diferencias en la densidad de fotorreceptores, en la agudeza de la corteza visual y en factores de atención.</li>
+      <li>¿Influye la edad, el uso de pantallas o la corrección visual? Son preguntas abiertas que podríamos explorar con los datos del grupo.</li>
+    </ul>
+  </div>
+
+  <div class="learn-footer">
+    <a href="index.html" class="btn btn-secondary">← Volver al experimento</a>
+    <p class="author-credit">Guillermo Solovey · UTDT · 2026</p>
+  </div>
+
+</div>
+</body>
+</html>

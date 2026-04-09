@@ -15,7 +15,7 @@
   <main class="app">
     <section id="welcome-screen" class="screen">
       <div class="card">
-        <h1>Experimento de deteccion de bordes</h1>
+        <h1>Medí tu umbral de detección</h1>
         <p>
           En cada ensayo vas a ver dos regiones de color muy parecido. Tu tarea es tocar
           o hacer clic en el lugar donde crees que cambia el color. A veces la diferencia
@@ -48,27 +48,8 @@
 
         <div class="actions">
           <button id="start-btn" class="btn btn-primary">Comenzar</button>
-          <button id="info-btn" class="btn">Mas informacion</button>
+          <a href="learn.html" class="btn">Más información</a>
         </div>
-      </div>
-    </section>
-
-    <section id="info-screen" class="screen hidden">
-      <div class="card">
-        <h2>Que mide este experimento</h2>
-        <p>
-          Esta tarea estima cuanta diferencia de color necesitas para localizar el borde
-          entre dos regiones contiguas.
-        </p>
-        <p>
-          El resultado final es un umbral individual. Un valor mas bajo indica mayor
-          sensibilidad para detectar cambios sutiles en ese canal de color.
-        </p>
-        <p>
-          El umbral se estima a partir de la proporcion de aciertos por nivel de diferencia
-          y un criterio de rendimiento de 0.5.
-        </p>
-        <button id="back-btn" class="btn btn-primary">Volver</button>
       </div>
     </section>
 

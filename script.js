@@ -31,15 +31,12 @@ const SUPABASE_HEADERS = SUPABASE_ENABLED
 const ui = {
   welcomeBrand: document.getElementById("welcome-brand"),
   welcomeScreen: document.getElementById("welcome-screen"),
-  infoScreen: document.getElementById("info-screen"),
   experimentScreen: document.getElementById("experiment-screen"),
   resultsScreen: document.getElementById("results-screen"),
   modeButtons: Array.from(document.querySelectorAll(".mode-btn")),
   participantInput: document.getElementById("participant-input"),
   welcomeError: document.getElementById("welcome-error"),
   startBtn: document.getElementById("start-btn"),
-  infoBtn: document.getElementById("info-btn"),
-  backBtn: document.getElementById("back-btn"),
   repeatBtn: document.getElementById("repeat-btn"),
   otherColorBtn: document.getElementById("other-color-btn"),
   shareBtn: document.getElementById("share-btn"),
@@ -84,8 +81,6 @@ const state = {
 };
 
 ui.startBtn.addEventListener("click", startExperimentFromWelcome);
-ui.infoBtn.addEventListener("click", () => showScreen("info"));
-ui.backBtn.addEventListener("click", () => showScreen("welcome"));
 ui.repeatBtn.addEventListener("click", repeatSameColor);
 ui.otherColorBtn.addEventListener("click", goToWelcome);
 ui.shareBtn.addEventListener("click", shareResults);
@@ -188,7 +183,6 @@ function startExperimentCore() {
 function showScreen(name) {
   ui.welcomeBrand.classList.toggle("hidden", name !== "welcome");
   ui.welcomeScreen.classList.toggle("hidden", name !== "welcome");
-  ui.infoScreen.classList.toggle("hidden", name !== "info");
   ui.experimentScreen.classList.toggle("hidden", name !== "experiment");
   ui.resultsScreen.classList.toggle("hidden", name !== "results");
 }
@@ -729,8 +723,8 @@ function renderResultsChart(stats, curve, thresholdValue) {
     {
       label: "Proporcion observada",
       data: observed,
-      borderColor: "#126a9a",
-      backgroundColor: "#126a9a",
+      borderColor: "#e8c547",
+      backgroundColor: "#e8c547",
       borderWidth: 2,
       tension: 0,
       pointRadius: 5,
@@ -743,8 +737,8 @@ function renderResultsChart(stats, curve, thresholdValue) {
     datasets.push({
       label: "Curva de sensibilidad",
       data: curve,
-      borderColor: "#0f8a52",
-      backgroundColor: "#0f8a52",
+      borderColor: "#5b8dee",
+      backgroundColor: "#5b8dee",
       borderWidth: 2,
       pointRadius: 0,
       tension: 0.25,
@@ -758,7 +752,7 @@ function renderResultsChart(stats, curve, thresholdValue) {
       { x: minDelta, y: CRITERION },
       { x: maxDelta, y: CRITERION }
     ],
-    borderColor: "#7f8a9d",
+    borderColor: "#3a4255",
     borderDash: [8, 6],
     borderWidth: 2,
     pointRadius: 0,
@@ -770,8 +764,8 @@ function renderResultsChart(stats, curve, thresholdValue) {
     datasets.push({
       label: "Umbral estimado",
       data: [{ x: thresholdValue, y: CRITERION }],
-      borderColor: "#d9480f",
-      backgroundColor: "#d9480f",
+      borderColor: "#f97316",
+      backgroundColor: "#f97316",
       pointRadius: 6,
       pointHoverRadius: 7,
       showLine: false
@@ -797,7 +791,7 @@ function renderResultsChart(stats, curve, thresholdValue) {
       plugins: {
         legend: {
           labels: {
-            color: "#243249",
+            color: "#8b8fa8",
             filter(item, chartData) {
               const label = chartData.datasets[item.datasetIndex]?.label;
               return label === "Proporcion observada" || label === "Curva de sensibilidad";
@@ -810,11 +804,14 @@ function renderResultsChart(stats, curve, thresholdValue) {
           type: "linear",
           min: minDelta,
           max: maxDelta,
+          grid: { color: "rgba(42,45,62,0.8)" },
           title: {
             display: true,
-            text: "Delta (diferencia de color)"
+            text: "Delta (diferencia de color)",
+            color: "#8b8fa8"
           },
           ticks: {
+            color: "#8b8fa8",
             callback(value) {
               return Number(value).toFixed(2).replace(/\.00$/, "");
             }
@@ -823,10 +820,13 @@ function renderResultsChart(stats, curve, thresholdValue) {
         y: {
           min: 0,
           max: 1,
+          grid: { color: "rgba(42,45,62,0.8)" },
           title: {
             display: true,
-            text: "Proporcion correcta"
-          }
+            text: "Proporcion correcta",
+            color: "#8b8fa8"
+          },
+          ticks: { color: "#8b8fa8" }
         }
       }
     }
